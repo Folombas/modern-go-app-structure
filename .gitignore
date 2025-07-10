@@ -1,0 +1,21 @@
+cat > .gitignore << EOF
+# Игнорируем бинарники
+bin/
+dist/
+
+# Игнорируем кэш Go
+/.workspace/
+/.vscode/
+/go.sum
+
+# Игнорируем системные файлы
+.DS_Store
+thumbs.db
+
+# Игнорируем конфиги с секретами
+.env
+*.secret
+
+# Игнорируем лог-файлы
+*.log
+EOF
