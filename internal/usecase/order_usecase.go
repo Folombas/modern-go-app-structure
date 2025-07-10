@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"modern-go-app-structure/internal/domain"
-	"modern-go-app-structure/internal/service"
+	"github.com/Folombas/modern-go-app-structure/internal/domain"
+	"github.com/Folombas/modern-go-app-structure/internal/service"
 )
 
 // OrderUsecase - сценарии работы с заказами

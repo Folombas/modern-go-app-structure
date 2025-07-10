@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"modern-go-app-structure/internal/domain"
-	"modern-go-app-structure/internal/service"
-	"modern-go-app-structure/internal/usecase"
-	"modern-go-app-structure/pkg/logger"
+	"github.com/Folombas/modern-go-app-structure/internal/domain"
+	"github.com/Folombas/modern-go-app-structure/internal/service"
+	"github.com/Folombas/modern-go-app-structure/internal/usecase"
+	"github.com/Folombas/modern-go-app-structure/pkg/logger"
 )
 
 func main() {
