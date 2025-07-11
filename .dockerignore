@@ -1,0 +1,11 @@
+.git
+.gitignore
+bin/
+dist/
+.env
+*.log
+Dockerfile
+docker-compose.yml
+.vscode/
+.idea/
+go.sum
