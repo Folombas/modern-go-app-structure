@@ -38,3 +38,9 @@ func (uc *orderUsecase) CreateOrder(ctx context.Context, userID string, amount i
 	
 	return order, nil
 }
+
+func (uc *orderUsecase) GetRecentOrders(ctx context.Context, limit int) ([]*domain.Order, error) {
+	// В реальном приложении здесь была бы бизнес-логика
+	// Например, проверка прав доступа
+	return uc.orderRepo.GetRecentOrders(ctx, limit)
+}

@@ -17,6 +17,18 @@ import (
 	_ "github.com/Folombas/modern-go-app-structure/internal/domain"
 )
 
+func setupFiberServer(
+	userRepo repository.UserRepository,
+	orderUsecase usecase.OrderUsecase,
+) *fiber.App {
+	app := fiber.New(fiber.Config{
+		ServerHeader:  "Delivery API",
+		AppName:       "Modern Go App Structure",
+		Views:         html.New("./web/templates", ".html"), // Добавляем поддержку шаблонов
+	})
+	
+}
+
 func main() {
 	logger.Info("🚀 Starting delivery application")
 
@@ -37,21 +49,26 @@ func main() {
 		cfg.Database.SSLMode,
 	)
 
-	repo, err := repository.NewPostgresRepository(connStr)
+	// Создаем конкретную реализацию репозитория
+	repoImpl, err := repository.NewPostgresRepository(connStr)
 	if err != nil {
 		log.Fatalf("❌ Database connection failed: %v", err)
 	}
-	defer repo.Close()
+	defer repoImpl.Close()
+
+	// Используем репозиторий как интерфейс
+	var userRepo repository.UserRepository = repoImpl
+	var orderRepo repository.OrderRepository = repoImpl
 
 	// Инициализация сервисов
 	paymentService := service.NewPaymentService()
-	orderUsecase := usecase.NewOrderUsecase(repo, paymentService)
+	orderUsecase := usecase.NewOrderUsecase(orderRepo, paymentService)
 
 	// Создаем пользователя
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	
-	user, err := repo.CreateUser(ctx, "Courier Alex")
+	user, err := userRepo.CreateUser(ctx, "Courier Alex")
 	if err != nil {
 		logger.Error("❌ Failed to create user: " + err.Error())
 		os.Exit(1)
