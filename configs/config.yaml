@@ -1,0 +1,11 @@
+database:
+  host: localhost
+  port: 5432
+  user: app_user
+  password: secure_password
+  dbname: delivery_app
+  sslmode: disable
+
+app:
+  port: 8080
+  env: development
