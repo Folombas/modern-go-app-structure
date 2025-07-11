@@ -1,22 +1,23 @@
 package usecase
 
 import (
+	"context"
 	"github.com/Folombas/modern-go-app-structure/internal/domain"
+	"github.com/Folombas/modern-go-app-structure/internal/repository"
 	"github.com/Folombas/modern-go-app-structure/internal/service"
 )
 
-// OrderUsecase - сценарии работы с заказами
 type OrderUsecase interface {
-	CreateOrder(userID string, amount int) (*domain.Order, error)
+	CreateOrder(ctx context.Context, userID string, amount int) (*domain.Order, error)
 }
 
 type orderUsecase struct {
-	orderRepo   domain.OrderRepository
+	orderRepo   repository.OrderRepository // Используем интерфейс
 	paymentServ service.PaymentService
 }
 
 func NewOrderUsecase(
-	orderRepo domain.OrderRepository,
+	orderRepo repository.OrderRepository, // Используем интерфейс
 	paymentServ service.PaymentService,
 ) OrderUsecase {
 	return &orderUsecase{
@@ -25,20 +26,15 @@ func NewOrderUsecase(
 	}
 }
 
-func (uc *orderUsecase) CreateOrder(userID string, amount int) (*domain.Order, error) {
-	// Создаем заказ
-	order, err := uc.orderRepo.CreateOrder(userID, amount)
+func (uc *orderUsecase) CreateOrder(ctx context.Context, userID string, amount int) (*domain.Order, error) {
+	order, err := uc.orderRepo.CreateOrder(ctx, userID, amount)
 	if err != nil {
 		return nil, err
 	}
 	
-	// Обрабатываем платеж
 	if err := uc.paymentServ.ProcessPayment(amount); err != nil {
 		return nil, err
 	}
-	
-	// Обновляем статус заказа
-	// В реальном приложении здесь была бы дополнительная логика
 	
 	return order, nil
 }
