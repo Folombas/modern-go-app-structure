@@ -65,3 +65,7 @@ func (r *PostgresRepository) CreateOrder(ctx context.Context, userID string, amo
 		CreatedAt: createdAt,
 	}, nil
 }
+
+func (r *PostgresRepository) Close() error {
+    return r.db.Close()
+}

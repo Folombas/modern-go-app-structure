@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"time"
+
 	"github.com/Folombas/modern-go-app-structure/internal/config"
-	"github.com/Folombas/modern-go-app-structure/internal/domain"
 	"github.com/Folombas/modern-go-app-structure/internal/repository"
 	"github.com/Folombas/modern-go-app-structure/internal/service"
 	"github.com/Folombas/modern-go-app-structure/internal/usecase"
 	"github.com/Folombas/modern-go-app-structure/pkg/logger"
-	"os"
-	"time"
+
+	// Явный импорт domain
+	_ "github.com/Folombas/modern-go-app-structure/internal/domain"
 )
 
 func main() {
