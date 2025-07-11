@@ -25,6 +25,19 @@ type Config struct {
 func LoadConfig(path string) (*Config, error) {
 	cfg := &Config{}
 	
+	// Для Docker окружения используем переменные окружения
+	if os.Getenv("APP_ENV") == "docker" {
+		cfg.Database.Host = os.Getenv("DB_HOST")
+		cfg.Database.Port = 5432
+		cfg.Database.User = os.Getenv("DB_USER")
+		cfg.Database.Password = os.Getenv("DB_PASSWORD")
+		cfg.Database.DBName = os.Getenv("DB_NAME")
+		cfg.Database.SSLMode = "disable"
+		cfg.App.Port = 8080
+		cfg.App.Env = "docker"
+		return cfg, nil
+	}
+	
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
