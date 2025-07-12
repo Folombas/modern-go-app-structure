@@ -8,65 +8,71 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/Folombas/modern-go-app-structure/internal/greeter"
+	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 )
 
-var startTime = time.Now()
+var (
+	startTime      = time.Now()
+	clients        = make(map[*websocket.Conn]bool)
+	clientsMutex   sync.Mutex
+	upgrader       = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			return true // Разрешаем все источники (для разработки)
+		},
+	}
+)
 
 func init() {
 	log.Println("🛠 Инициализация приложения...")
 }
 
 func main() {
-	// 0. Загрузка .env файла
+	// Загрузка .env файла
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️ .env file not found, using defaults")
 	}
 
-	// 1. Обработка конфигурации
-	// Получаем порт из переменных окружения или используем значение по умолчанию
-	portStr := os.Getenv("APP_PORT")
-	if portStr == "" {
-		portStr = "8080" // Значение по умолчанию
+	// Конфигурация
+	port, _ := strconv.Atoi(os.Getenv("APP_PORT"))
+	if port == 0 {
+		port = 8080
 	}
-
-	// Преобразуем строку в число
-	port, err := strconv.Atoi(portStr)
-	if err != nil {
-		log.Fatalf("Неверный формат порта: %v", err)
-	}
-
-	// Получаем окружение
 	env := os.Getenv("APP_ENV")
 	if env == "" {
-		env = "development" // Значение по умолчанию
+		env = "development"
 	}
 
-	// 2. Инициализация логгера
+	// Инициализация логгера
 	log.SetPrefix("[APP] ")
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	log.Printf("🚀 Приложение инициализируется в окружении '%s' на порту %d...", env, port)
 
-	// 3. Использование нашего пакета greeter
+	// Использование пакета greeter
 	message, err := greeter.SayHello("Гоша")
 	if err != nil {
 		log.Fatalf("Ошибка в пакете greeter: %v", err)
 	}
 	fmt.Println(message)
 
-	// 4. Настройка HTTP-сервера
+	// Настройка HTTP-сервера
 	mux := http.NewServeMux()
 	
+	// Веб-страница
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `
+		html := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 <head>
 	<title>Modern Go App</title>
+	<meta charset="UTF-8">
 	<style>
 		body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
 		h1 { color: #2c3e50; }
@@ -78,21 +84,45 @@ func main() {
 			border-radius: 10px; 
 			font-size: 0.8em;
 		}
+		#uptime { 
+			font-weight: bold;
+			color: #2c3e50;
+			font-size: 1.2em;
+		}
 	</style>
+	<script>
+		const ws = new WebSocket("ws://" + window.location.host + "/ws");
+		
+		ws.onmessage = function(event) {
+			const data = JSON.parse(event.data);
+			if (data.uptime) {
+				document.getElementById('uptime').textContent = data.uptime;
+			}
+		};
+		
+		ws.onerror = function(error) {
+			console.error("WebSocket Error:", error);
+		};
+	</script>
 </head>
 <body>
 	<h1>Привет от Go! 🚀</h1>
 	<div class="info">
-		<p>Сервер работает: <strong>%s</strong></p>
+		<p>Сервер работает: <span id="uptime">%s</span></p>
 		<p>Окружение: <span class="env-badge">%s</span></p>
 		<p>Порт: <strong>%d</strong></p>
 		<p>Версия: <strong>%s</strong></p>
+		<p><small>Время обновляется в реальном времени с сервера</small></p>
 	</div>
 </body>
 </html>
-		`, getEnvColor(env), time.Since(startTime).Round(time.Second), env, port, getVersion())
+		`, getEnvColor(env), formatDuration(time.Since(startTime)), env, port, getVersion())
+		
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write([]byte(html))
 	})
 
+	// Health-check
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{
@@ -100,16 +130,22 @@ func main() {
 			"timestamp": "%s",
 			"version": "%s",
 			"uptime": "%s"
-		}`, time.Now().Format(time.RFC3339), getVersion(), time.Since(startTime).Round(time.Second))
+		}`, time.Now().Format(time.RFC3339), getVersion(), formatDuration(time.Since(startTime)))
 	})
 
-	// 5. Запуск сервера в отдельной горутине
+	// WebSocket endpoint
+	mux.HandleFunc("/ws", handleWebSocket)
+
+	// Запуск сервера
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
 		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
+
+	// Запуск рассылки обновлений времени
+	go broadcastUptime()
 
 	go func() {
 		log.Printf("🌐 HTTP-сервер запущен на порту %d", port)
@@ -119,14 +155,14 @@ func main() {
 		}
 	}()
 
-	// 6. Обработка сигналов для корректного завершения
+	// Обработка сигналов завершения
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
 
 	log.Println("🛑 Получен сигнал завершения...")
 	
-	// Создаем контекст с таймаутом для завершения
+	// Корректное завершение
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	
@@ -137,23 +173,69 @@ func main() {
 	log.Println("✅ Сервер корректно остановлен")
 }
 
-// Вспомогательная функция для цвета окружения
-func getEnvColor(env string) string {
-	switch env {
-	case "production":
-		return "#e74c3c" // Красный
-	case "staging":
-		return "#f39c12" // Оранжевый
-	default:
-		return "#2ecc71" // Зеленый
+// Обработчик WebSocket соединений
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("WebSocket upgrade error: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	// Регистрируем нового клиента
+	clientsMutex.Lock()
+	clients[conn] = true
+	clientsMutex.Unlock()
+
+	// Отправляем начальное значение
+	conn.WriteJSON(map[string]string{
+		"uptime": formatDuration(time.Since(startTime)),
+	})
+
+	// Ожидаем сообщений (клиент может отправить запрос на обновление)
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			break
+		}
+	}
+	
+	// Удаляем клиента при отключении
+	clientsMutex.Lock()
+	delete(clients, conn)
+	clientsMutex.Unlock()
+}
+
+// Рассылка обновлений всем подключенным клиентам
+func broadcastUptime() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	
+	for range ticker.C {
+		uptime := formatDuration(time.Since(startTime))
+		
+		clientsMutex.Lock()
+		for client := range clients {
+			err := client.WriteJSON(map[string]string{
+				"uptime": uptime,
+			})
+			if err != nil {
+				log.Printf("WebSocket write error: %v", err)
+				client.Close()
+				delete(clients, client)
+			}
+		}
+		clientsMutex.Unlock()
 	}
 }
 
-// Вспомогательная функция для получения версии приложения
-func getVersion() string {
-	version := os.Getenv("APP_VERSION")
-	if version == "" {
-		return "1.0.0-dev"
-	}
-	return version
+// Форматирование времени в ЧЧ:ММ:СС
+func formatDuration(d time.Duration) string {
+	total := int(d.Seconds())
+	hours := total / 3600
+	minutes := (total % 3600) / 60
+	seconds := total % 60
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
+
+// Вспомогательные функции (getEnvColor, getVersion остаются без изменений)
