@@ -16,3 +16,8 @@
 ```bash
 go mod tidy
 ```
+
+## Пример вывода
+```bash
+$ go run cmd/main.go
+Server started on port 8080
