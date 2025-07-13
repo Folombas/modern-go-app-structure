@@ -3,7 +3,7 @@ module github.com/Folombas/modern-go-app-structure
 go 1.24.4
 
 require (
-	github.com/mssola/user_agent v0.6.0
+	github.com/mssola/useragent v1.0.0
 	github.com/stretchr/testify v1.10.0
 )
 
