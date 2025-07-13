@@ -1,14 +1,11 @@
-# Настройки golangci-lint
+version: 2
 
 run:
-  # Включаем все проверки по умолчанию
   timeout: 5m
 
 linters:
-  # Включаем все доступные линтеры
   enable-all: true
 
 issues:
-  # Скрываем предупреждения, которые нам не важны
   exclude-use:
-    - "unused variable" # Пример: если не хочешь видеть предупреждения обunused
+    - "unused variable"
