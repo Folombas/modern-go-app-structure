@@ -27,18 +27,18 @@
 
 ### 1. Клонирование репозитория
 
-````bash
+`````bash
 git clone https://github.com/Folombas/modern-go-app-structure.git
 cd modern-go-app-structure
 
 ## Установка зависимостей
-```bash
+````bash
 go mod tidy
 
 ## Запуск на Windows/Linux
-```bash
+````bash
 make run
 # Или через go run:
 go run cmd/main.go
 
-````
+`````
