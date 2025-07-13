@@ -1,4 +1,4 @@
-echo "# Modern-go-app-structure
+# Modern-go-app-structure
 
 Это учебное приложение, демонстрирующее современную структуру Go-проекта.
 
