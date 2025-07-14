@@ -27,18 +27,6 @@
 
 ### 1. Клонирование репозитория
 
-`````bash
-git clone https://github.com/Folombas/modern-go-app-structure.git
+```bash
+git clone https://github.com/Folombas/modern-go-app-structure.git 
 cd modern-go-app-structure
-
-## Установка зависимостей
-````bash
-go mod tidy
-
-## Запуск на Windows/Linux
-````bash
-make run
-# Или через go run:
-go run cmd/main.go
-
-`````
