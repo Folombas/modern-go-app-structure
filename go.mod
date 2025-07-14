@@ -1,6 +1,6 @@
 module github.com/Folombas/modern-go-app-structure
 
-go 1.24.4
+go 1.18
 
 require (
 	github.com/mssola/useragent v1.0.0

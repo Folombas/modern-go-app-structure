@@ -33,6 +33,10 @@ type UserAgent struct {
 	undecided    bool
 }
 
+func (p *UserAgent) Arch()  {
+	panic("unimplemented")
+}
+
 // Read from the given string until the given delimiter or the
 // end of the string have been reached.
 //
