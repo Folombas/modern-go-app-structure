@@ -2,9 +2,9 @@ package useragent
 
 import (
     "github.com/mssola/useragent"
+    "net"
     "runtime"
     "strings"
-    "net"
 )
 
 // ClientInfo содержит информацию о клиенте
@@ -22,7 +22,7 @@ type ClientInfo struct {
 func GetClientInfo(userAgentString string, clientIP string) ClientInfo {
     ua := useragent.New(userAgentString)
     if ua == nil {
-        return ClientInfo{}
+        return ClientInfo{} // Возвращает пустые данные при ошибке
     }
 
     deviceType := "Desktop"
@@ -49,6 +49,7 @@ func GetClientInfo(userAgentString string, clientIP string) ClientInfo {
 
 // getConnectionType определяет тип подключения
 func getConnectionType(ip string) string {
+    // Убираем порт из IP (например, "192.168.1.100:56789" → "192.168.1.100"
     ip = strings.Split(ip, ":")[0]
 
     ipObj := net.ParseIP(ip)
@@ -56,17 +57,20 @@ func getConnectionType(ip string) string {
         return "Не определено"
     }
 
+    // Проверка частных IP-адресов (LAN/Wi-Fi)
     if ipObj.IsPrivate() || ipObj.IsLoopback() {
         return "LAN / Wi-Fi"
     }
 
+    // Проверка IPv4-диапазона для 172.16.0.0–172.31.255.255
     if ipObj.To4() != nil {
         if strings.HasPrefix(ip, "192.168.") || 
-            strings.HasPrefix(ip, "10.") || 
-            (strings.HasPrefix(ip, "172.") && ip[4] >= '1' && ip[4] <= '3') {
+			strings.HasPrefix(ip, "10.") ||
+			(strings.HasPrefix(ip, "172.") && ipObj[0] == 172 && ipObj[1] >= 16 && ipObj[1] <= 31) {
             return "LAN / Wi-Fi"
         }
     }
 
+    // Если IP публичный — это мобильный интернет
     return "Мобильный"
 }
